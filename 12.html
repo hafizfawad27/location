@@ -1,0 +1,202 @@
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Location Form</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, button {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #cccccc;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      display: none;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      display: block;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>Location Form</h1>
+  <form id="myForm">
+    <div>
+      <label for="Email">Email:</label>
+      <input type="email" id="Email" name="Email" required>
+    </div>
+    
+    <div>
+      <label for="Name">Name:</label>
+      <input type="text" id="Name" name="Name" required>
+    </div>
+    
+    <div>
+      <label for="Description">Description:</label>
+      <input type="text" id="Description" name="Description" required>
+    </div>
+    
+    <div>
+      <label for="Latitude">Latitude:</label>
+      <input type="text" id="Latitude" name="Latitude" readonly>
+    </div>
+    
+    <div>
+      <label for="Longitude">Longitude:</label>
+      <input type="text" id="Longitude" name="Longitude" readonly>
+    </div>
+    
+    <button type="button" id="locationButton">Get My Location</button>
+    <div id="locationStatus" class="status"></div>
+    
+    <button type="submit" id="submitButton">Submit</button>
+    <div id="formStatus" class="status"></div>
+  </form>
+
+  <script>
+    document.getElementById('locationButton').addEventListener('click', getLocation);
+    document.getElementById('myForm').addEventListener('submit', submitForm);
+
+    function getLocation() {
+      const button = document.getElementById('locationButton');
+      const status = document.getElementById('locationStatus');
+      
+      button.disabled = true;
+      button.textContent = 'Getting Location...';
+      status.className = 'status';
+      status.textContent = 'Please allow location access when prompted...';
+      status.style.display = 'block';
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            document.getElementById('Latitude').value = position.coords.latitude.toFixed(6);
+            document.getElementById('Longitude').value = position.coords.longitude.toFixed(6);
+            status.textContent = 'Location obtained successfully!';
+            status.className = 'status success';
+            button.textContent = 'Location Obtained';
+          },
+          (error) => {
+            let message = 'Error getting location: ';
+            switch(error.code) {
+              case error.PERMISSION_DENIED:
+                message += 'You denied location permission. Please refresh and allow access.';
+                break;
+              case error.POSITION_UNAVAILABLE:
+                message += 'Location unavailable. Check your connection.';
+                break;
+              case error.TIMEOUT:
+                message += 'Location request timed out. Try again.';
+                break;
+              case error.UNKNOWN_ERROR:
+                message += 'Unknown error occurred.';
+                break;
+            }
+            status.textContent = message;
+            status.className = 'status error';
+            button.textContent = 'Try Again';
+            button.disabled = false;
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+          }
+        );
+      } else {
+        status.textContent = 'Geolocation is not supported by your browser.';
+        status.className = 'status error';
+        button.textContent = 'Not Supported';
+      }
+    }
+
+    function submitForm(e) {
+      e.preventDefault();
+      const form = e.target;
+      const button = document.getElementById('submitButton');
+      const status = document.getElementById('formStatus');
+      
+      button.disabled = true;
+      button.textContent = 'Submitting...';
+      status.className = 'status';
+      status.textContent = 'Submitting form data...';
+      status.style.display = 'block';
+
+      const formData = new FormData(form);
+      const url = 'https://script.google.com/macros/s/AKfycbyxepTg6Ja6I-NJtTjRJ70RLW1u4NXpLEjZ1BuQAzH3oyglEMVPG4KPmnlrzElr3iMjQA/exec'; // Replace with your actual URL
+
+      fetch(url, {
+        method: 'POST',
+        body: new URLSearchParams(formData),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.result === 'success') {
+          status.textContent = `Form submitted successfully! Row: ${data.row}`;
+          status.className = 'status success';
+          form.reset();
+        } else {
+          throw new Error(data.error || 'Unknown server error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        status.textContent = `Submission failed: ${error.message}`;
+        status.className = 'status error';
+      })
+      .finally(() => {
+        button.textContent = 'Submit';
+        button.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>
